@@ -1,88 +1,752 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ─── Design tokens ──────────────────────────────────────────────────────────── */
+
 :root {
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-border: #334155;
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-accent: #38bdf8;
-  --color-accent-badge: rgba(56, 189, 248, 0.15);
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --bg:              #0d1117;
+  --surface:         #161b22;
+  --surface-hover:   #1c2330;
+  --border:          #21262d;
+  --border-subtle:   #1a2030;
+
+  --text-primary:    #e6edf3;
+  --text-secondary:  #7d8590;
+  --text-tertiary:   #484f58;
+
+  --accent:          #58a6ff;
+  --accent-dim:      rgba(88, 166, 255, 0.10);
+  --accent-border:   rgba(88, 166, 255, 0.22);
+
+  --user-bg:         #161b22;
+  --user-border:     #21262d;
+
+  --code-bg:         #0d1117;
+  --code-border:     #21262d;
+  --code-text:       #e6edf3;
+
+  --radius-sm:  6px;
+  --radius-md:  10px;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace,
+               "SFMono-Regular", Menlo, monospace;
+
+  --content-max: 700px;
 }
 
-* {
+/* ─── Reset ──────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  /* Prevent any element from blowing out the page width */
+  overflow-x: hidden;
+}
+
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text-primary);
-  font-family: var(--font-family);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1.5rem;
-  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  min-height: 100dvh;
+  /* overflow-x hidden on body is NOT a workaround here —
+     the real fixes are internal scroll containers on pre/table below. */
+  overflow-x: hidden;
 }
 
 #root {
-  width: 100%;
-  max-width: 640px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  /* Constrain root to viewport width so nothing can escape */
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
-.tutor-shell {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-surface-border);
-  border-radius: 1rem;
-  padding: 2.5rem 2rem;
-  text-align: center;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+/* ─── KaTeX — prevent block math from blowing out the page ──────────────────── */
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.5rem;
+  /* Soft max-width so very wide formulas scroll internally */
+  max-width: 100%;
 }
 
-.course-code-badge {
-  display: inline-block;
-  background-color: var(--color-accent-badge);
-  color: var(--color-accent);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+.katex {
+  font-size: 1em;
+}
+
+/* ─── App layout ─────────────────────────────────────────────────────────────── */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────────── */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0 1rem;
+  height: 52px;
+  flex-shrink: 0;
+  /* Prevent header items from overflowing on small screens */
+  min-width: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.header-course-badge {
+  font-size: 0.6875rem;
   font-weight: 700;
-  font-size: 0.875rem;
-  letter-spacing: 0.05em;
-  padding: 0.35rem 0.85rem;
-  border-radius: 9999px;
-  margin-bottom: 1.25rem;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.course-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.02em;
+.header-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
-.course-instructor {
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 1.5rem;
+.header-course-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
-.tutor-role {
-  font-size: 1.125rem;
+.header-right {
+  flex-shrink: 0;
+}
+
+/* Demo switcher — development-only, small and unobtrusive */
+.demo-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.2rem 0.3rem;
+}
+
+.demo-switcher-label {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
   font-weight: 600;
-  color: var(--color-accent);
-  border-top: 1px solid var(--color-surface-border);
-  padding-top: 1.25rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0 0.25rem;
+  user-select: none;
+  white-space: nowrap;
 }
 
-@media (max-width: 480px) {
-  .tutor-shell {
-    padding: 1.75rem 1.25rem;
+.demo-btn {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  background: transparent;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.demo-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.demo-btn.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ─── Main ───────────────────────────────────────────────────────────────────── */
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* Do NOT set overflow: hidden here — it prevents scroll */
+  min-height: 0;
+}
+
+/* ─── Conversation scroll area ──────────────────────────────────────────────── */
+
+.conversation-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden; /* fix: contain any wide child */
+  padding: 2rem 1.25rem 1.5rem;
+  scroll-behavior: smooth;
+}
+
+.conversation-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.conversation-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.conversation-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* Ensure inner container never exceeds scroll area */
+  width: 100%;
+}
+
+/* ─── Message turns ──────────────────────────────────────────────────────────── */
+
+.turn {
+  padding: 1.125rem 0;
+}
+
+.turn + .turn {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ─── User message ───────────────────────────────────────────────────────────── */
+
+.user-message {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-bubble {
+  background: var(--user-bg);
+  border: 1px solid var(--user-border);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  /* max-width: percent of parent — never overflow conversation-inner */
+  max-width: 75%;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+  /* Allow long words / URLs to wrap rather than overflow */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ─── Tutor message ──────────────────────────────────────────────────────────── */
+
+.tutor-message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  /* Contain all child content */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tutor-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.75;
+}
+
+.tutor-content {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+  /* Critical: contain wide children (pre, table, katex) */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ─── Rich content ───────────────────────────────────────────────────────────── */
+
+.tutor-content p {
+  margin-bottom: 0.9rem;
+}
+
+.tutor-content p:last-child {
+  margin-bottom: 0;
+}
+
+.tutor-content strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tutor-content em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.tutor-content h1,
+.tutor-content h2,
+.tutor-content h3 {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 1.375rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.tutor-content h2 {
+  font-size: 1.0625rem;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.35rem;
+}
+
+.tutor-content h3 {
+  font-size: 0.9375rem;
+}
+
+.tutor-content ul,
+.tutor-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.tutor-content li {
+  margin-bottom: 0.3rem;
+  line-height: 1.65;
+}
+
+/* ── Inline code ─────────────────────────────────────────────────── */
+
+.tutor-content code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  color: #e3b341;
+  /* Prevent inline code from overflowing its parent */
+  word-break: break-all;
+}
+
+/* ── Code blocks — internal horizontal scroll, never push page wide ── */
+
+.tutor-content pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.125rem;
+  margin-bottom: 0.9rem;
+  /* KEY FIX: internal scroll, not page-level overflow */
+  overflow-x: auto;
+  /* Prevent pre from being wider than its containing column */
+  max-width: 100%;
+  /* Ensure pre itself doesn't shrink its children weirdly */
+  min-width: 0;
+}
+
+.tutor-content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--code-text);
+  font-family: var(--font-mono);
+  line-height: 1.65;
+  /* Allow code text to overflow pre — pre itself clips it */
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+/* ── Tables — internal horizontal scroll ─────────────────────────── */
+
+/*
+ * Wrap generated <table> in a scrollable container.
+ * react-markdown renders bare <table> elements; we can't easily inject
+ * a wrapper div via CSS alone, so we use overflow-x: auto on a display:block
+ * table and constrain width.
+ */
+
+.tutor-content table {
+  border-collapse: collapse;
+  /* Make table a block-level element that can scroll internally */
+  display: block;
+  overflow-x: auto;
+  /* Never wider than the content column */
+  max-width: 100%;
+  width: max-content;
+  margin-bottom: 0.9rem;
+  font-size: 0.875rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tutor-content thead {
+  background: var(--surface);
+}
+
+.tutor-content th {
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tutor-content td {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.tutor-content tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Citations ──────────────────────────────────────────────────────────────── */
+
+.citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 0.2rem 0.625rem;
+  line-height: 1.4;
+  cursor: default;
+  transition: border-color 0.15s, color 0.15s;
+  /* Chips wrap but don't overflow */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citation-chip:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.citation-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+
+/* ─── Empty / welcome state ─────────────────────────────────────────────────── */
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem 6rem;
+  text-align: center;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  width: 100%;
+  /* Prevent empty state from overflowing */
+  overflow-x: hidden;
+}
+
+.empty-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.8;
+  margin-bottom: 1rem;
+}
+
+.empty-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+  margin-bottom: 0.625rem;
+  line-height: 1.25;
+}
+
+.empty-sub {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  max-width: 360px;
+  margin-bottom: 2.25rem;
+  line-height: 1.6;
+}
+
+.example-prompts-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.625rem;
+  align-self: flex-start;
+  width: 100%;
+  max-width: 460px;
+  text-align: left;
+}
+
+.example-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 460px;
+}
+
+.example-prompt-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  line-height: 1.45;
+  /* Prevent button text from overflowing */
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.example-prompt-btn:hover {
+  border-color: var(--accent-border);
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* ─── Composer ───────────────────────────────────────────────────────────────── */
+
+.composer-area {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding: 0.875rem 1rem 1rem;
+  flex-shrink: 0;
+  /* Prevent composer from overflowing the viewport */
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.composer-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  position: relative;
+  /* Constrain to available width */
+  width: 100%;
+}
+
+.composer-textarea {
+  /* Full width of composer-inner, not full viewport */
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  /*
+   * Right padding reserves space for the 32px button + 8px gap + 8px inset.
+   * This keeps text from running under the send button.
+   */
+  padding: 0.75rem 3.25rem 0.75rem 0.875rem;
+  resize: none;
+  outline: none;
+  min-height: 52px;
+  max-height: 180px;
+  overflow-y: auto;
+  transition: border-color 0.15s;
+  /* Prevent textarea from overflowing its container */
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.composer-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.composer-textarea:focus {
+  border-color: var(--accent-border);
+}
+
+.composer-send {
+  position: absolute;
+  right: 0.5rem;
+  /* Vertically center the button relative to the min-height textarea */
+  bottom: 0.5rem;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  color: #0d1117;
+  /* Ensure button is never pushed offscreen */
+  z-index: 2;
+}
+
+.composer-send:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.composer-send:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.composer-send:not(:disabled):active {
+  transform: scale(0.93);
+}
+
+.composer-hint {
+  margin-top: 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* ─── Scroll anchor ──────────────────────────────────────────────────────────── */
+
+.scroll-anchor {
+  height: 1px;
+}
+
+/* ─── Mobile — 600px and below ───────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .header {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
   }
 
-  .course-title {
-    font-size: 1.5rem;
+  /* Hide the long course name on very small screens — badge still shows */
+  .header-course-name {
+    display: none;
+  }
+
+  .header-divider {
+    display: none;
+  }
+
+  /* Demo switcher: hide text label, keep buttons */
+  .demo-switcher-label {
+    display: none;
+  }
+
+  .conversation-scroll {
+    padding: 1.25rem 0.875rem 1rem;
+  }
+
+  .user-bubble {
+    /* On mobile allow message to use more width */
+    max-width: 88%;
+    font-size: 0.9375rem;
+  }
+
+  .tutor-content {
+    font-size: 0.9375rem;
+  }
+
+  .composer-area {
+    padding: 0.625rem 0.75rem 0.75rem;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem 5rem;
+  }
+
+  .empty-heading {
+    font-size: 1.25rem;
+  }
+
+  /* On narrow screens, code font size drops slightly so code doesn't feel cramped */
+  .tutor-content pre code {
+    font-size: 0.75rem;
+  }
+
+  /* Tables: ensure internal scroll hint is visible */
+  .tutor-content table {
+    font-size: 0.8125rem;
+  }
+}
+
+/* ─── Medium (tablet) — 601–900px ───────────────────────────────────────────── */
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .conversation-scroll {
+    padding: 1.75rem 1.5rem 1.25rem;
+  }
+
+  .composer-area {
+    padding: 0.875rem 1.25rem 1rem;
   }
 }
