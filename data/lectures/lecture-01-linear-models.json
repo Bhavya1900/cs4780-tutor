@@ -1,0 +1,178 @@
+{
+    "lecture_id": "lec_01",
+    "course_code": "CS 4780",
+    "course_title": "Machine Learning for Engineers",
+    "week": 1,
+    "title": "Linear Models and Loss Functions",
+    "slides": [
+        {
+            "slide_number": 1,
+            "title": "Linear Models and Loss Functions",
+            "bullets": [
+                "CS 4780 — Week 1",
+                "Dr. Elena Márquez"
+            ],
+            "notes": "Housekeeping: problem set 1 goes out Friday, due in two weeks."
+        },
+        {
+            "slide_number": 2,
+            "title": "What a supervised learning problem is",
+            "bullets": [
+                "We are given pairs (x, y): an input and the answer we wanted.",
+                "We want a function f that maps unseen x to a good y.",
+                "'Good' has to be made precise before we can optimise anything — that is what a loss function is for."
+            ],
+            "notes": "Emphasise that choosing the loss IS a modelling decision, not a technicality. Students consistently treat it as boilerplate."
+        },
+        {
+            "slide_number": 3,
+            "title": "The linear model",
+            "bullets": [
+                "The simplest useful hypothesis class: a weighted sum of the inputs plus an offset.",
+                "w is the weight vector, b is the bias (or intercept).",
+                "Everything later in this course is a variation on this idea with more structure."
+            ],
+            "formulas": [
+                "f(x) = w^T x + b"
+            ],
+            "notes": "Point out that 'linear' means linear in the PARAMETERS, not necessarily in the raw inputs — this matters once we add basis functions."
+        },
+        {
+            "slide_number": 4,
+            "title": "Squared error loss",
+            "bullets": [
+                "The default choice for regression.",
+                "Penalises large errors quadratically, so one bad outlier dominates the total.",
+                "Convenient because it is smooth and convex in w."
+            ],
+            "formulas": [
+                "L(w, b) = \\frac{1}{n} \\sum_{i=1}^{n} (y_i - (w^T x_i + b))^2"
+            ],
+            "notes": "Ask the class what happens with a single mislabelled point at y = 10^6."
+        },
+        {
+            "slide_number": 5,
+            "title": "Why squared error is sensitive to outliers",
+            "figure": {
+                "description": "Two scatter plots side by side, each showing the same ten data points lying close to a straight line. In the left plot a best-fit line passes cleanly through the points. In the right plot one additional point sits far above the others, and the fitted line is visibly tilted upward toward it, no longer passing through the original cluster. The tilted line is annotated 'fit dragged by a single outlier'."
+            },
+            "notes": "This is the whole point of the slide — there is no text here, the comparison is the content."
+        },
+        {
+            "slide_number": 6,
+            "title": "Absolute error as an alternative",
+            "bullets": [
+                "Penalises errors linearly, so a single outlier has bounded influence.",
+                "The cost: it is not differentiable at zero, which complicates the optimisation we will see in Week 2.",
+                "In practice: use squared error unless you have a reason not to, and know what that reason is."
+            ],
+            "formulas": [
+                "L(w, b) = \\frac{1}{n} \\sum_{i=1}^{n} |y_i - (w^T x_i + b)|"
+            ],
+            "notes": "Robust regression is a whole field. We only touch it."
+        },
+        {
+            "slide_number": 7,
+            "title": "Classification needs a different loss",
+            "bullets": [
+                "If y is a label rather than a number, squared error is the wrong tool.",
+                "We want the model to output a probability, and we want to be penalised for being confidently wrong.",
+                "This leads to the logistic model and cross-entropy loss."
+            ],
+            "notes": "Students often try squared error on classification in PS1. It technically runs, which is what makes it a good mistake to make early."
+        },
+        {
+            "slide_number": 8,
+            "title": "The logistic function",
+            "bullets": [
+                "Squashes any real number into (0, 1), so the output can be read as a probability.",
+                "Symmetric around zero: sigma(0) = 0.5.",
+                "Saturates at both ends — a fact that will cause us real trouble in Week 2."
+            ],
+            "formulas": [
+                "\\sigma(z) = \\frac{1}{1 + e^{-z}}",
+                "p(y=1 \\mid x) = \\sigma(w^T x + b)"
+            ],
+            "notes": "Flag the saturation now. It is the seed of the vanishing gradient discussion later."
+        },
+        {
+            "slide_number": 9,
+            "title": "The shape of the logistic curve",
+            "figure": {
+                "description": "A single plot of the sigmoid function over the range z = -6 to 6. The curve rises smoothly from near 0 on the left to near 1 on the right, passing through the point (0, 0.5), which is marked with a dot. Two shaded regions at the far left and far right are labelled 'saturated: gradient approaches zero'. The steepest part of the curve, around z = 0, is annotated 'gradient largest here'."
+            },
+            "notes": "Come back to this figure in Week 2 when we do backpropagation."
+        },
+        {
+            "slide_number": 10,
+            "title": "Cross-entropy loss",
+            "bullets": [
+                "Also called log loss or negative log-likelihood.",
+                "Goes to infinity as the model becomes confidently wrong, which is exactly the behaviour we want.",
+                "Derived from maximum likelihood, not invented arbitrarily."
+            ],
+            "formulas": [
+                "L = -\\frac{1}{n} \\sum_{i=1}^{n} \\left[ y_i \\log p_i + (1 - y_i) \\log (1 - p_i) \\right]",
+                "p_i = \\sigma(w^T x_i + b)"
+            ],
+            "notes": "Derive this from likelihood on the board if time allows. It lands much better than presenting it as a formula."
+        },
+        {
+            "slide_number": 11,
+            "title": "Comparing the two losses on a single example",
+            "bullets": [
+                "Suppose the true label is 1 and the model predicts p = 0.01.",
+                "Squared error contributes (1 - 0.01)^2 = 0.98 — bounded, and barely worse than predicting 0.5.",
+                "Cross-entropy contributes -log(0.01) = 4.6 — much larger, and it grows without limit as p goes to zero.",
+                "That unbounded penalty is why classification models trained with cross-entropy learn faster from their worst mistakes."
+            ],
+            "notes": "Concrete numbers work far better here than the general argument."
+        },
+        {
+            "slide_number": 12,
+            "title": "The closed-form solution for linear regression",
+            "bullets": [
+                "For squared error, the optimum can be written down directly — no iteration needed.",
+                "This is the exception, not the rule. Almost nothing else in this course has a closed form.",
+                "It also requires inverting a matrix, which becomes impractical as the number of features grows."
+            ],
+            "formulas": [
+                "w^* = (X^T X)^{-1} X^T y"
+            ],
+            "notes": "Motivate Week 2 here: we need iterative methods precisely because this doesn't generalise."
+        },
+        {
+            "slide_number": 13,
+            "title": "When the closed form fails",
+            "bullets": [
+                "X^T X may be singular — for example when two features are perfectly correlated, or when you have more features than data points.",
+                "The inversion costs roughly O(d^3) in the number of features d.",
+                "For a model with a million parameters this is not a computation anybody runs."
+            ],
+            "notes": "Someone always asks about pseudo-inverses. Acknowledge, defer."
+        },
+        {
+            "slide_number": 14,
+            "title": "Feature scaling",
+            "bullets": [
+                "If one feature ranges over [0, 1] and another over [0, 100000], the loss surface becomes highly elongated.",
+                "Standardising each feature to zero mean and unit variance usually fixes this.",
+                "This matters enormously for the iterative methods in Week 2 and not at all for the closed form."
+            ],
+            "formulas": [
+                "x'_j = \\frac{x_j - \\mu_j}{\\sigma_j}"
+            ],
+            "notes": "Worth stressing: this is one of the few genuinely free wins in practical ML."
+        },
+        {
+            "slide_number": 15,
+            "title": "Summary and what comes next",
+            "bullets": [
+                "A model is a hypothesis class plus a loss function; both are choices you make.",
+                "Squared error for regression, cross-entropy for classification, and know why.",
+                "Closed-form solutions are a special case. Next week we cover the general method: gradient descent."
+            ],
+            "notes": "Reading: Chapter 3. Problem set 1 is out Friday."
+        }
+    ]
+}

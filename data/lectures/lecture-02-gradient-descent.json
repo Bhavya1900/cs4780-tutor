@@ -1,0 +1,187 @@
+{
+    "lecture_id": "lec_02",
+    "course_code": "CS 4780",
+    "course_title": "Machine Learning for Engineers",
+    "week": 2,
+    "title": "Gradient Descent and Backpropagation",
+    "slides": [
+        {
+            "slide_number": 1,
+            "title": "Gradient Descent and Backpropagation",
+            "bullets": [
+                "CS 4780 — Week 2",
+                "Dr. Elena Márquez"
+            ],
+            "notes": "Recall last week we ended on why closed-form solutions don't scale."
+        },
+        {
+            "slide_number": 2,
+            "title": "The idea in one sentence",
+            "bullets": [
+                "Start somewhere, work out which direction increases the loss fastest, and step the other way.",
+                "Repeat until the steps stop helping.",
+                "That is the entire algorithm. Everything else is detail about the step size and the derivative."
+            ],
+            "notes": "Say this before any notation. Students who get the sentence get the rest."
+        },
+        {
+            "slide_number": 3,
+            "title": "The update rule",
+            "bullets": [
+                "eta is the learning rate: how far we move on each step.",
+                "The gradient points uphill, hence the minus sign.",
+                "Note that this needs the loss to be differentiable — which is why the absolute-error loss from Week 1 was awkward."
+            ],
+            "formulas": [
+                "w \\leftarrow w - \\eta \\nabla_w L(w)",
+                "\\nabla_w L = \\left( \\frac{\\partial L}{\\partial w_1}, \\ldots, \\frac{\\partial L}{\\partial w_d} \\right)"
+            ],
+            "notes": "Connect back explicitly to slide 6 of Week 1."
+        },
+        {
+            "slide_number": 4,
+            "title": "Choosing the learning rate",
+            "figure": {
+                "description": "Three small plots arranged left to right, each showing a U-shaped loss curve with a descent path drawn on it. In the left plot, labelled 'too small', many tiny arrows creep down one side of the curve and stop well short of the minimum. In the centre plot, labelled 'about right', four or five arrows step smoothly down into the bottom of the curve. In the right plot, labelled 'too large', arrows bounce back and forth between the two walls of the U, each one landing higher than the last, diverging away from the minimum."
+            },
+            "notes": "No formula on this slide on purpose. The picture is the lesson."
+        },
+        {
+            "slide_number": 5,
+            "title": "Batch, stochastic, and mini-batch",
+            "bullets": [
+                "Batch gradient descent uses every training example for each update: accurate, slow.",
+                "Stochastic gradient descent uses one example: noisy, fast, and the noise sometimes helps escape bad regions.",
+                "Mini-batch uses a few dozen to a few hundred. This is what everyone actually does.",
+                "The batch size is a trade-off between gradient quality and hardware utilisation."
+            ],
+            "notes": "Mention that mini-batch sizes are usually powers of two for GPU reasons, not statistical ones."
+        },
+        {
+            "slide_number": 6,
+            "title": "Why we need the chain rule",
+            "bullets": [
+                "A neural network is a composition of functions: each layer feeds the next.",
+                "To update an early weight we need to know how it affects a loss computed several layers later.",
+                "The chain rule gives us exactly that, and applying it systematically is what we call backpropagation."
+            ],
+            "formulas": [
+                "\\frac{\\partial L}{\\partial w} = \\frac{\\partial L}{\\partial a} \\cdot \\frac{\\partial a}{\\partial z} \\cdot \\frac{\\partial z}{\\partial w}"
+            ],
+            "notes": "Backpropagation is not a new idea. It is the chain rule with bookkeeping."
+        },
+        {
+            "slide_number": 7,
+            "title": "A two-layer network",
+            "bullets": [
+                "Forward pass: compute each layer's output in turn, keeping the intermediate values.",
+                "Backward pass: start from the loss and propagate derivatives back, reusing those stored values.",
+                "The storage requirement of the forward pass is why memory, not compute, often limits model size."
+            ],
+            "formulas": [
+                "z_1 = W_1 x + b_1, \\quad a_1 = \\sigma(z_1)",
+                "z_2 = W_2 a_1 + b_2, \\quad \\hat{y} = \\sigma(z_2)"
+            ],
+            "notes": "Walk through this on the board with actual numbers if there is time."
+        },
+        {
+            "slide_number": 8,
+            "title": "The backward pass, written out",
+            "bullets": [
+                "Each term is local: it depends only on values that layer already computed.",
+                "That locality is what makes the algorithm efficient and what makes automatic differentiation possible."
+            ],
+            "formulas": [
+                "\\delta_2 = \\frac{\\partial L}{\\partial z_2} = (\\hat{y} - y)",
+                "\\frac{\\partial L}{\\partial W_2} = \\delta_2 a_1^T",
+                "\\delta_1 = (W_2^T \\delta_2) \\odot \\sigma'(z_1)",
+                "\\frac{\\partial L}{\\partial W_1} = \\delta_1 x^T"
+            ],
+            "notes": "The Hadamard product trips people up. Say explicitly that it is elementwise."
+        },
+        {
+            "slide_number": 9,
+            "title": "The vanishing gradient problem",
+            "bullets": [
+                "The derivative of the logistic function is at most 0.25, and far smaller once it saturates.",
+                "Backpropagation multiplies one such factor per layer.",
+                "Through ten layers, a gradient can be scaled by 0.25^10, which is roughly one in a million.",
+                "The early layers therefore receive almost no signal and effectively stop learning."
+            ],
+            "formulas": [
+                "\\sigma'(z) = \\sigma(z)(1 - \\sigma(z)) \\leq 0.25"
+            ],
+            "notes": "This is the single most important slide in the lecture. Connect it directly to the saturation regions in the Week 1 sigmoid figure."
+        },
+        {
+            "slide_number": 10,
+            "title": "Gradient magnitude by depth",
+            "figure": {
+                "description": "A bar chart with layer number on the horizontal axis, running from layer 1 on the left to layer 10 on the right, and average gradient magnitude on a logarithmic vertical axis. The bars decrease sharply from right to left: layer 10 has a tall bar near 10^-1, while layer 1 has a barely visible bar near 10^-7. A dashed trend line is drawn through the bar tops, annotated 'roughly one order of magnitude lost per layer'."
+            },
+            "notes": "Measured from a real training run on the toy network from lab 1."
+        },
+        {
+            "slide_number": 11,
+            "title": "ReLU and why it helps",
+            "bullets": [
+                "The rectified linear unit is zero for negative inputs and the identity for positive ones.",
+                "Its derivative is exactly 1 wherever the unit is active, so it does not shrink the gradient on the way back.",
+                "The cost: units that receive consistently negative input have zero gradient forever — the 'dying ReLU' problem.",
+                "Variants such as leaky ReLU exist precisely to address that."
+            ],
+            "formulas": [
+                "\\text{ReLU}(z) = \\max(0, z)",
+                "\\text{ReLU}'(z) = \\begin{cases} 1 & z > 0 \\\\ 0 & z \\leq 0 \\end{cases}"
+            ],
+            "notes": "This is the answer to slide 9. Make the link explicit rather than assuming they see it."
+        },
+        {
+            "slide_number": 12,
+            "title": "Momentum",
+            "bullets": [
+                "Plain gradient descent oscillates across narrow valleys and crawls along them.",
+                "Momentum accumulates a running average of past gradients, damping the oscillation and accelerating the consistent direction.",
+                "Typical value for beta is 0.9, meaning the update remembers roughly the last ten steps."
+            ],
+            "formulas": [
+                "v \\leftarrow \\beta v + (1 - \\beta) \\nabla_w L",
+                "w \\leftarrow w - \\eta v"
+            ],
+            "notes": "The rolling-ball analogy is fine but don't over-extend it."
+        },
+        {
+            "slide_number": 13,
+            "title": "Adam, briefly",
+            "bullets": [
+                "Keeps a running average of both the gradient and its square, and scales each parameter's step accordingly.",
+                "Effectively gives every parameter its own learning rate.",
+                "It is the default in most frameworks and usually works without tuning, which is why it is so widely used.",
+                "It is not always better than well-tuned SGD with momentum, particularly for very large models."
+            ],
+            "notes": "Do not derive Adam. Give the intuition and move on."
+        },
+        {
+            "slide_number": 14,
+            "title": "Diagnosing a failed training run",
+            "bullets": [
+                "Loss is flat from the start: learning rate too small, or gradients vanishing.",
+                "Loss explodes to infinity or NaN: learning rate too large, or exploding gradients — try gradient clipping.",
+                "Training loss falls but validation loss rises: not an optimisation problem at all. That is overfitting, and it is next week's topic.",
+                "Loss falls then plateaus far above zero: possibly a model capacity limit, possibly a bad local region."
+            ],
+            "notes": "Students find this slide the most immediately useful in the whole course. Leave it up while they ask questions."
+        },
+        {
+            "slide_number": 15,
+            "title": "Summary and what comes next",
+            "bullets": [
+                "Gradient descent is: differentiate, step downhill, repeat.",
+                "Backpropagation is the chain rule applied systematically, reusing the forward pass.",
+                "Saturating activations shrink gradients with depth; ReLU largely fixes this.",
+                "Next week: what to do when your model fits the training data and still fails."
+            ],
+            "notes": "Lab 1 is due before next lecture."
+        }
+    ]
+}

@@ -1,0 +1,112 @@
+{
+    "description": "Canned tutor responses replayed by mock-stream.mjs. Each scenario is a full response plus how it should behave while streaming. Nothing here calls a real model — you need no API key and every run is identical.",
+    "scenarios": [
+        {
+            "id": "plain",
+            "prompt": "What is the difference between supervised and unsupervised learning?",
+            "first_token_delay_ms": 400,
+            "chunk_delay_ms": 18,
+            "text": "In **supervised learning** you are given pairs of inputs and the answers you wanted — the data is labelled. The model's job is to learn a mapping from one to the other, and you can measure how well it did by comparing its output against the label you already had.\n\nIn **unsupervised learning** there are no labels. You give the model data and ask it to find structure in it: clusters of similar items, a lower-dimensional representation, patterns that recur. There is no ground truth to check against, which is exactly what makes evaluating it harder.\n\nThe course covers supervised learning first because the feedback signal is unambiguous, and that makes the optimisation story much easier to tell.",
+            "citations": [
+                {
+                    "lecture": "Week 1 — Linear Models and Loss Functions",
+                    "slide": 2
+                }
+            ]
+        },
+        {
+            "id": "code",
+            "prompt": "Show me how gradient descent is implemented.",
+            "first_token_delay_ms": 550,
+            "chunk_delay_ms": 14,
+            "text": "Here is the update loop in its simplest form:\n\n```python\ndef gradient_descent(X, y, lr=0.01, epochs=100):\n    w = np.zeros(X.shape[1])\n    b = 0.0\n\n    for epoch in range(epochs):\n        y_hat = X @ w + b\n        error = y_hat - y\n\n        # Gradients of the mean squared error\n        grad_w = (2 / len(X)) * (X.T @ error)\n        grad_b = (2 / len(X)) * error.sum()\n\n        w -= lr * grad_w\n        b -= lr * grad_b\n\n    return w, b\n```\n\nThe two lines that matter are the last two: the gradient points uphill, so we subtract it. `lr` is the learning rate, and if you set it too large this loop will diverge rather than converge — you will see the loss increase on every step.",
+            "citations": [
+                {
+                    "lecture": "Week 2 — Gradient Descent and Backpropagation",
+                    "slide": 3
+                }
+            ]
+        },
+        {
+            "id": "math",
+            "prompt": "Why is the sigmoid derivative at most 0.25?",
+            "first_token_delay_ms": 350,
+            "chunk_delay_ms": 16,
+            "text": "Because of its own algebraic form. The derivative is\n\n$$\\sigma'(z) = \\sigma(z)\\bigl(1 - \\sigma(z)\\bigr)$$\n\nand since $\\sigma(z)$ is always in $(0, 1)$, this is a product of two numbers that sum to exactly 1. A product of two such numbers is largest when they are equal, which happens at $\\sigma(z) = 0.5$, giving $0.5 \\times 0.5 = 0.25$.\n\nThat bound is the whole reason vanishing gradients happen: backpropagation multiplies one of these factors per layer, so through ten layers you can be scaling the gradient by $0.25^{10} \\approx 10^{-6}$.",
+            "citations": [
+                {
+                    "lecture": "Week 1 — Linear Models and Loss Functions",
+                    "slide": 8
+                },
+                {
+                    "lecture": "Week 2 — Gradient Descent and Backpropagation",
+                    "slide": 9
+                }
+            ]
+        },
+        {
+            "id": "table",
+            "prompt": "Compare the regularization techniques we covered.",
+            "first_token_delay_ms": 500,
+            "chunk_delay_ms": 12,
+            "text": "| Technique | What it does | When to reach for it |\n|---|---|---|\n| L2 (ridge) | Penalises squared weight magnitude; shrinks weights toward zero | Sensible default for most models |\n| L1 (lasso) | Penalises absolute magnitude; drives some weights to exactly zero | When you want feature selection or an interpretable model |\n| Dropout | Randomly zeroes activations during training | Large networks |\n| Early stopping | Stops at the validation minimum | Always — it is free |\n| Data augmentation | Adds label-preserving transformed examples | When a valid transformation genuinely exists |\n\nThe honest answer is that none of these beats getting more data. Everything in this table is what you do when you cannot.",
+            "citations": [
+                {
+                    "lecture": "Week 3 — Regularization and Generalization",
+                    "slide": 14
+                }
+            ]
+        },
+        {
+            "id": "long",
+            "prompt": "Explain everything about backpropagation.",
+            "first_token_delay_ms": 300,
+            "chunk_delay_ms": 8,
+            "text": "Backpropagation is the chain rule applied systematically, with bookkeeping so you do not recompute anything twice.\n\n## The forward pass\n\nYou compute each layer's output in turn and keep the intermediate values. For a two-layer network:\n\n$$z_1 = W_1 x + b_1, \\quad a_1 = \\sigma(z_1)$$\n$$z_2 = W_2 a_1 + b_2, \\quad \\hat{y} = \\sigma(z_2)$$\n\nThose stored intermediates are not an optimisation detail — they are the reason memory rather than compute usually limits how large a model you can train.\n\n## The backward pass\n\nStarting from the loss, you propagate derivatives backwards, reusing the values above:\n\n$$\\delta_2 = \\hat{y} - y$$\n$$\\frac{\\partial L}{\\partial W_2} = \\delta_2 a_1^T$$\n$$\\delta_1 = (W_2^T \\delta_2) \\odot \\sigma'(z_1)$$\n$$\\frac{\\partial L}{\\partial W_1} = \\delta_1 x^T$$\n\nEach term is **local** — it depends only on values that layer already computed. That locality is what makes the algorithm efficient, and it is also what makes automatic differentiation possible at all.\n\n## Why depth causes trouble\n\nNotice the $\\odot \\sigma'(z_1)$ in the third line. Every layer the gradient passes through multiplies it by an activation derivative. For the sigmoid that factor is at most 0.25, so:\n\n- Through 2 layers: roughly $0.0625$\n- Through 5 layers: roughly $0.001$\n- Through 10 layers: roughly $0.000001$\n\nBy the time the gradient reaches the earliest layers there is effectively nothing left, and those layers stay near their random initialisation for the whole of training. This is the vanishing gradient problem.\n\n## What to do about it\n\n1. **ReLU** — its derivative is exactly 1 for positive inputs, so it contributes a factor of 1 rather than 0.25\n2. **Careful initialisation** — He or Xavier initialisation keeps pre-activations away from the saturating region to begin with\n3. **Residual connections** — give the gradient a path back that skips the nonlinearity entirely\n4. **Batch normalisation** — keeps activations in a well-behaved range as training proceeds\n\nThe first of these is why ReLU replaced sigmoid as the default activation almost everywhere, despite introducing its own problem in the form of permanently dead units.",
+            "citations": [
+                {
+                    "lecture": "Week 2 — Gradient Descent and Backpropagation",
+                    "slide": 6
+                },
+                {
+                    "lecture": "Week 2 — Gradient Descent and Backpropagation",
+                    "slide": 9
+                },
+                {
+                    "lecture": "Week 2 — Gradient Descent and Backpropagation",
+                    "slide": 11
+                }
+            ]
+        },
+        {
+            "id": "refusal",
+            "prompt": "When is the final exam?",
+            "first_token_delay_ms": 380,
+            "chunk_delay_ms": 20,
+            "text": "I could not find that in the course materials. The lectures I have access to cover the technical content but not the exam schedule or grading breakdown — your professor or the syllabus will have that.",
+            "citations": []
+        },
+        {
+            "id": "error-midstream",
+            "prompt": "Walk me through the midterm solutions.",
+            "first_token_delay_ms": 420,
+            "chunk_delay_ms": 15,
+            "text": "Let's go through the midterm question by question. The first one asked you to state the gradient descent update rule and explain what the learning rate controls, which most of the class",
+            "error": "The connection to the tutor was lost.",
+            "citations": []
+        },
+        {
+            "id": "slow",
+            "prompt": "Summarise the whole course so far.",
+            "first_token_delay_ms": 4200,
+            "chunk_delay_ms": 10,
+            "text": "Three weeks in, the through-line is this: a model is a hypothesis class plus a loss function, and both are choices you make rather than things you are handed.\n\nWeek 1 established that vocabulary and showed that a closed-form solution exists for linear regression — and that it is the exception rather than the rule. Week 2 gave you the general method, gradient descent, along with the reason deep networks were hard to train for so long. Week 3 reframed the whole objective: training loss was never the thing we cared about, only a proxy for performance on data we have not seen.\n\nIf you only remember one thing from each week: losses are choices, gradients shrink with depth, and the test set is sacred.",
+            "citations": [
+                {
+                    "lecture": "Week 3 — Regularization and Generalization",
+                    "slide": 15
+                }
+            ]
+        }
+    ]
+}

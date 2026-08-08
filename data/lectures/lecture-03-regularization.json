@@ -1,0 +1,175 @@
+{
+    "lecture_id": "lec_03",
+    "course_code": "CS 4780",
+    "course_title": "Machine Learning for Engineers",
+    "week": 3,
+    "title": "Regularization and Generalization",
+    "slides": [
+        {
+            "slide_number": 1,
+            "title": "Regularization and Generalization",
+            "bullets": [
+                "CS 4780 — Week 3",
+                "Dr. Elena Márquez"
+            ],
+            "notes": "Midterm covers weeks 1 through 5."
+        },
+        {
+            "slide_number": 2,
+            "title": "The problem we are actually trying to solve",
+            "bullets": [
+                "Nobody cares how well a model performs on data it has already seen.",
+                "The quantity of interest is performance on data drawn from the same distribution that we have not seen.",
+                "Training loss is a proxy for that, and it is a proxy that can be gamed — by the optimiser, accidentally."
+            ],
+            "notes": "This reframing is the point of the whole lecture. Do not rush it."
+        },
+        {
+            "slide_number": 3,
+            "title": "Overfitting",
+            "bullets": [
+                "A model overfits when it captures structure that is specific to the training sample rather than the underlying process.",
+                "It is not a bug in the optimiser. The optimiser did precisely what it was asked.",
+                "More capacity and less data both make it more likely."
+            ],
+            "notes": "Memorising the training set is a perfect score on the wrong exam."
+        },
+        {
+            "slide_number": 4,
+            "title": "The characteristic training curve",
+            "figure": {
+                "description": "A line chart with training epochs on the horizontal axis and loss on the vertical axis. Two curves are plotted. The training loss curve falls steadily and continues falling toward zero across the whole chart. The validation loss curve falls together with it at first, reaches a minimum roughly a third of the way along, then turns and rises steadily for the remainder. A vertical dashed line is drawn at the validation minimum, labelled 'stop here'. The widening vertical gap between the two curves after that point is shaded and labelled 'generalization gap'."
+            },
+            "notes": "Every student will see this shape in their own runs. Naming it now saves confusion later."
+        },
+        {
+            "slide_number": 5,
+            "title": "The bias-variance decomposition",
+            "bullets": [
+                "Expected error splits into three parts: bias, variance, and irreducible noise.",
+                "Bias is error from the model being too simple to represent the truth.",
+                "Variance is error from the model being too sensitive to the particular training sample.",
+                "The third term is a property of the data, and no model can reduce it."
+            ],
+            "formulas": [
+                "\\mathbb{E}[(y - \\hat{f}(x))^2] = \\text{Bias}[\\hat{f}(x)]^2 + \\text{Var}[\\hat{f}(x)] + \\sigma^2"
+            ],
+            "notes": "The irreducible term is the one students forget. Ask what it means for a model that reports zero error."
+        },
+        {
+            "slide_number": 6,
+            "title": "L2 regularization (ridge)",
+            "bullets": [
+                "Add a penalty on the squared magnitude of the weights to the loss.",
+                "This expresses a preference for smaller weights, which means smoother functions.",
+                "lambda controls the strength: zero recovers the unregularized model, large values force everything toward zero.",
+                "In gradient descent this appears as a term that shrinks every weight slightly on each step, which is why it is also called weight decay."
+            ],
+            "formulas": [
+                "L_{\\text{reg}} = L + \\lambda \\sum_{j} w_j^2",
+                "w \\leftarrow w - \\eta (\\nabla_w L + 2\\lambda w)"
+            ],
+            "notes": "Connect the second formula back to the Week 2 update rule so they see it is the same algorithm."
+        },
+        {
+            "slide_number": 7,
+            "title": "L1 regularization (lasso)",
+            "bullets": [
+                "Penalises the absolute value of the weights instead of the square.",
+                "Drives some weights to exactly zero, which performs feature selection as a side effect.",
+                "L2 shrinks weights toward zero; L1 sets them to zero. That difference matters when you want an interpretable model.",
+                "Like the absolute error loss from Week 1, it is not differentiable at zero and needs slightly more care."
+            ],
+            "formulas": [
+                "L_{\\text{reg}} = L + \\lambda \\sum_{j} |w_j|"
+            ],
+            "notes": "Second explicit callback to Week 1. Students who noticed the pattern usually say so here."
+        },
+        {
+            "slide_number": 8,
+            "title": "Why L1 produces exact zeros",
+            "figure": {
+                "description": "Two contour diagrams side by side in weight space, each showing elliptical contours of the loss function centred away from the origin. In the left diagram, labelled 'L2', a circle centred on the origin represents the constraint region, and the point where the ellipse first touches the circle is marked — it lies off both axes, so both weights are non-zero but small. In the right diagram, labelled 'L1', the constraint region is a diamond with corners on the axes, and the contact point sits exactly on a corner, directly on one axis. The corner is annotated 'w2 = 0 exactly'."
+            },
+            "notes": "This diagram does the explaining. Do not talk over it."
+        },
+        {
+            "slide_number": 9,
+            "title": "Dropout",
+            "bullets": [
+                "During training, randomly set a fraction of activations to zero on every forward pass.",
+                "The network cannot rely on any single unit, so it is pushed toward redundant, distributed representations.",
+                "At test time nothing is dropped; activations are rescaled to keep the expected magnitude consistent.",
+                "Typical rates are 0.2 to 0.5. Applying dropout at test time is a common and confusing bug."
+            ],
+            "notes": "Ask why it would be wrong to leave dropout enabled at test time. Good discussion, usually five minutes."
+        },
+        {
+            "slide_number": 10,
+            "title": "Early stopping",
+            "bullets": [
+                "Monitor validation loss and stop when it stops improving.",
+                "Effectively free: it costs nothing beyond the validation set you should already have.",
+                "'Patience' is how many epochs you wait before concluding the improvement has genuinely stopped.",
+                "This is the dashed line from the curve on slide 4, turned into a procedure."
+            ],
+            "notes": "Simplest regulariser available and the most often forgotten."
+        },
+        {
+            "slide_number": 11,
+            "title": "Train, validation, test",
+            "bullets": [
+                "Train: the optimiser sees this and fits to it.",
+                "Validation: you see this, and use it to choose hyperparameters and when to stop.",
+                "Test: nobody sees it until the very end, and it is used exactly once.",
+                "Every time you make a decision based on the test set, it becomes a validation set and stops being an honest estimate."
+            ],
+            "notes": "The last point is the one that matters professionally. Say it twice."
+        },
+        {
+            "slide_number": 12,
+            "title": "Cross-validation",
+            "bullets": [
+                "Split the data into k folds, train k times, and hold out a different fold each time.",
+                "Gives a more stable estimate than a single split, particularly when data is scarce.",
+                "Costs k times as much compute, which is why it is uncommon for large models.",
+                "k = 5 or k = 10 are the usual choices."
+            ],
+            "notes": "Mention stratification for imbalanced classification."
+        },
+        {
+            "slide_number": 13,
+            "title": "Data augmentation",
+            "bullets": [
+                "Generate additional training examples by applying transformations that do not change the label.",
+                "For images: crops, flips, small rotations, colour shifts.",
+                "It works because it encodes a genuine assumption — that a mirrored photograph of a cat is still a cat.",
+                "The assumption has to actually hold. Mirroring a photograph of text does not preserve its meaning."
+            ],
+            "notes": "The failure case matters more than the success case here."
+        },
+        {
+            "slide_number": 14,
+            "title": "Choosing between these in practice",
+            "bullets": [
+                "Get more data if you possibly can. Nothing on this list beats it.",
+                "If you cannot: start with early stopping, because it is free.",
+                "Add L2 as a default for most models; reach for L1 when you specifically want sparsity.",
+                "Use dropout for large networks; use augmentation when you know a valid label-preserving transformation.",
+                "Change one thing at a time and measure. Changing three and reporting the improvement tells you nothing."
+            ],
+            "notes": "Final point applies well beyond regularisation."
+        },
+        {
+            "slide_number": 15,
+            "title": "Summary",
+            "bullets": [
+                "The goal is generalization; training loss is only a proxy for it.",
+                "Overfitting is the optimiser succeeding at the wrong objective.",
+                "Regularization expresses a preference for simpler explanations, whether through a penalty, through noise, or by stopping early.",
+                "Guard the test set."
+            ],
+            "notes": "Problem set 3 out today. Midterm in two weeks."
+        }
+    ]
+}

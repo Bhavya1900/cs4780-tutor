@@ -1,0 +1,15 @@
+{
+    "id": "conv_9002",
+    "course": {
+        "id": "sec_8801",
+        "code": "CS 4780",
+        "title": "Machine Learning for Engineers",
+        "instructor": "Dr. Elena Márquez"
+    },
+    "student": {
+        "id": "stu_0031",
+        "name": "Ben Tanaka"
+    },
+    "started_at": null,
+    "messages": []
+}
