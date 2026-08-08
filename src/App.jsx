@@ -1,74 +1,114 @@
 /**
  * App.jsx
  *
- * Root of the CS 4780 Course Tutor application.
+ * Root of the CS 4780 Course Tutor — Phase 4A.
  *
- * Phase 3 renders:
- *   - Sticky course header with demo state switcher
- *   - Conversation message list (from conversation.json)
- *   - Empty/welcome state (from conversation-empty.json)
- *   - Message composer
+ * New in this phase:
+ *   - Imports mock-stream.mjs for realistic chunk-by-chunk streaming.
+ *   - Uses the useStreaming hook to manage all streaming state.
+ *   - Matches submitted prompts to the 8 supplied scenarios via
+ *     scenarioMatcher.  Unmatched prompts receive a friendly "not in demo"
+ *     message, never a fabricated answer.
+ *   - Disables the composer while a response is in flight.
+ *   - The demo switcher continues to work; switching state resets all
+ *     messages and cancels any active stream.
  *
- * Streaming and citation panels are in later phases.
+ * Everything from Phase 3 (design, citation chips, empty state, mobile
+ * layout, Markdown/math/code/table rendering) is preserved unchanged.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 
+// ── Phase 2 data layer ───────────────────────────────────────────────────────
 import { activeConversation, emptyConversation, isEmptyConversation } from './data/conversations.js';
+import { getScenarioById } from './data/scenarios.js';
+
+// ── Phase 4A additions ───────────────────────────────────────────────────────
+import { streamResponse } from '../data/mock-stream.mjs';
+import { matchScenario } from './utils/scenarioMatcher.js';
+import { useStreaming } from './hooks/useStreaming.js';
+
+// ── Components ────────────────────────────────────────────────────────────────
 import TutorMessage from './components/TutorMessage.jsx';
 import EmptyState from './components/EmptyState.jsx';
 import Composer from './components/Composer.jsx';
 
-// ─── Available demo states ────────────────────────────────────────────────────
+// ─── Demo state options ───────────────────────────────────────────────────────
 
-const STATES = {
+const DEMO_STATES = {
   returning: activeConversation,
   new: emptyConversation,
 };
+
+/**
+ * Message shown when the student's question does not match any scenario.
+ * Friendly, not an error, explains this is a demo limitation.
+ */
+const NO_MATCH_MESSAGE =
+  "I don't have an answer for that in this demo. The questions I can answer are the eight supplied scenarios — try one of the example prompts to see the tutor in action.";
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [stateKey, setStateKey] = useState('returning');
-  const [messages, setMessages] = useState(activeConversation.messages);
   const [draft, setDraft] = useState('');
   const scrollAnchorRef = useRef(null);
 
-  // Sync the message list when the demo state changes
-  useEffect(() => {
-    setMessages(STATES[stateKey].messages);
-    setDraft('');
-  }, [stateKey]);
+  // Initialise the streaming hook with the returning-student conversation.
+  const { messages, isStreaming, submitMessage, resetMessages } = useStreaming(
+    activeConversation.messages
+  );
 
-  // Scroll to the bottom whenever new messages are added
+  // When the demo switcher changes, reset to the appropriate message list
+  // and cancel any active stream.
+  useEffect(() => {
+    resetMessages(DEMO_STATES[stateKey].messages);
+    setDraft('');
+  }, [stateKey, resetMessages]);
+
+  // Keep the view scrolled to the most recent message.
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const conversation = STATES[stateKey];
+  const conversation = DEMO_STATES[stateKey];
+  // Show the empty state only when we are in "new" mode and have no messages.
   const isEmpty = isEmptyConversation(conversation) && messages.length === 0;
 
   /**
-   * Appends a user message to local state.
-   * Phase 4 will also trigger the mock streaming tutor response here.
+   * Called when the student submits a question.
+   *
+   * 1. Match the prompt against the 8 scenarios.
+   * 2a. No match → pass an errorText so useStreaming shows the "not in demo"
+   *     message immediately without touching the streaming path.
+   * 2b. Match → create an AbortController + streamResponse generator and
+   *     hand them both to useStreaming.  useStreaming drives the loop and
+   *     attaches citations on completion.
    */
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || isStreaming) return;
 
-    const userMessage = {
-      id: `local_${Date.now()}`,
-      role: 'user',
-      created_at: new Date().toISOString(),
-      content: text,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
     setDraft('');
+
+    const scenarioId = matchScenario(text);
+
+    if (!scenarioId) {
+      // Unmatched — show the friendly "not in demo" note, no stream.
+      submitMessage(text, null, null, NO_MATCH_MESSAGE);
+      return;
+    }
+
+    const scenario = getScenarioById(scenarioId);
+    const controller = new AbortController();
+    const gen = streamResponse(scenarioId, { signal: controller.signal });
+
+    // submitMessage takes ownership of the generator and drives it.
+    submitMessage(text, gen, { citations: scenario.citations }, null);
   }
 
   /**
-   * Pre-fills the composer when the student clicks an example prompt.
+   * Pre-fills the composer from an empty-state example prompt click.
    */
   function handleExamplePrompt(prompt) {
     setDraft(prompt);
@@ -79,7 +119,6 @@ export default function App() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="header">
-        {/* Left: course identity */}
         <div className="header-left">
           <span className="header-course-badge">
             {conversation.course.code}
@@ -90,7 +129,6 @@ export default function App() {
           </span>
         </div>
 
-        {/* Right: demo state switcher */}
         <div className="header-right">
           <div className="demo-switcher" role="group" aria-label="Demo state">
             <span className="demo-switcher-label">Demo</span>
@@ -98,6 +136,7 @@ export default function App() {
               className={`demo-btn ${stateKey === 'returning' ? 'active' : ''}`}
               onClick={() => setStateKey('returning')}
               aria-pressed={stateKey === 'returning'}
+              disabled={isStreaming}
             >
               Returning
             </button>
@@ -105,6 +144,7 @@ export default function App() {
               className={`demo-btn ${stateKey === 'new' ? 'active' : ''}`}
               onClick={() => setStateKey('new')}
               aria-pressed={stateKey === 'new'}
+              disabled={isStreaming}
             >
               New
             </button>
@@ -115,14 +155,12 @@ export default function App() {
       {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main className="main">
         {isEmpty ? (
-          /* ── Empty / welcome state ─────────────────────────────────────── */
           <EmptyState
             course={conversation.course}
             studentName={conversation.student.name}
             onSelectPrompt={handleExamplePrompt}
           />
         ) : (
-          /* ── Conversation ──────────────────────────────────────────────── */
           <div className="conversation-scroll">
             <div className="conversation-inner">
               {messages.map((message) => (
@@ -136,18 +174,16 @@ export default function App() {
                   )}
                 </div>
               ))}
-              {/* Scroll target — keeps the view pinned to the newest message */}
               <div ref={scrollAnchorRef} className="scroll-anchor" />
             </div>
           </div>
         )}
 
-        {/* Composer — always present below the content */}
         <Composer
           value={draft}
           onChange={setDraft}
           onSubmit={handleSend}
-          disabled={false}
+          disabled={isStreaming}
         />
       </main>
 

@@ -3,12 +3,17 @@
  *
  * Renders a single assistant (tutor) message.
  *
- * Supports:
- *  - Markdown paragraphs, headings, bold, italic, lists (via react-markdown)
- *  - Fenced code blocks
- *  - Tables (via remark-gfm — required for GFM pipe-table syntax)
- *  - Inline and block mathematics (via remark-math + rehype-katex)
- *  - Citation chips resolved through the Phase 2 citation resolver
+ * Handles all message states:
+ *   isThinking: true   → show the loading dots (first-token wait)
+ *   isStreaming: true   → show growing content + blinking cursor
+ *   error present       → show partial content + inline error note
+ *   complete            → show full content + citation chips
+ *
+ * Rich content support (via ReactMarkdown):
+ *   - Markdown: paragraphs, headings, bold, italic, lists
+ *   - GFM tables  (remark-gfm)
+ *   - Code blocks (fenced and inline)
+ *   - Block and inline math  (remark-math + rehype-katex)
  */
 
 import React from 'react';
@@ -19,15 +24,14 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 
 import { resolveCitation } from '../utils/citations.js';
+import TutorThinking from './TutorThinking.jsx';
 
-/**
- * A single resolved citation shown as a small chip below the response.
- */
+// ─── Citation chip ────────────────────────────────────────────────────────────
+
 function CitationChip({ citation }) {
   const result = resolveCitation(citation);
 
   if (!result.resolved) {
-    // Render a minimal unresolved chip so the UI never crashes
     return (
       <span className="citation-chip">
         <span className="citation-dot" />
@@ -49,29 +53,53 @@ function CitationChip({ citation }) {
   );
 }
 
-/**
- * The full tutor message: label + rendered markdown content + citations.
- */
+// ─── TutorMessage ─────────────────────────────────────────────────────────────
+
 export default function TutorMessage({ message }) {
+  const {
+    content,
+    citations,
+    isThinking,
+    isStreaming,
+    error,
+  } = message;
+
   const hasCitations =
-    Array.isArray(message.citations) && message.citations.length > 0;
+    !isStreaming &&
+    !error &&
+    Array.isArray(citations) &&
+    citations.length > 0;
 
   return (
     <div className="tutor-message">
       <div className="tutor-label">Tutor</div>
 
-      <div className="tutor-content">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
-        >
-          {message.content}
-        </ReactMarkdown>
-      </div>
+      {/* ── Loading: waiting for first token ──────────────────────────── */}
+      {isThinking && <TutorThinking />}
 
+      {/* ── Content: grows progressively while streaming ──────────────── */}
+      {content && (
+        <div className={`tutor-content${isStreaming ? ' tutor-content--streaming' : ''}`}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      )}
+
+      {/* ── Stream error: shown after partial content ─────────────────── */}
+      {error && (
+        <p className="stream-error">
+          {error}
+        </p>
+      )}
+
+      {/* ── Citations: only after a clean, complete response ──────────── */}
       {hasCitations && (
         <div className="citations">
-          {message.citations.map((cit, i) => (
+          {citations.map((cit, i) => (
             <CitationChip key={i} citation={cit} />
           ))}
         </div>
