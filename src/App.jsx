@@ -1,50 +1,19 @@
-﻿/**
+/**
  * App.jsx
  *
- * Root of the CS 4780 Course Tutor -- Phase 5.
+ * Root of the CS 4780 Course Tutor -- Phase 5 / Phase 6.
  *
- * Phase 5 additions (on top of 4B):
- *
- *   PERSISTENCE
- *   - Each persona (returning / new) has its own localStorage key.
- *   - Initial messages are loaded from localStorage, falling back to the
- *     JSON fixture on first visit.
- *   - After every settled state update (isStreaming goes false), the current
- *     persona's messages are saved.  Transient streaming fields are stripped
- *     before saving (handled by conversationStorage.js).
- *
- *   INDEPENDENT PERSONAS
- *   - switchPersona() saves the outgoing messages, loads the incoming ones,
- *     and calls resetMessages() -- the demo switcher now behaves correctly.
- *   - activePersonaRef keeps a non-reactive copy of the active key so the
- *     save effect reads the right key without creating a dependency loop.
- *
- *   STUDY TRAIL
- *   - StudyTrailDesktop renders beside the conversation column (desktop only).
- *   - StudyTrailMobile renders above the composer (mobile only).
- *   - Both derive data deterministically from citation metadata on messages.
- *
- *   HANDLESEN OVERRIDE
- *   - handleSend accepts an optional text argument so example prompts and
- *     suggestion chips auto-send through the real streaming path.
- *
- *   NO-MATCH SUGGESTIONS
- *   - SUGGESTION_PROMPTS derived from allScenarios (never hardcoded).
- *   - Passed to submitMessage; stored on the no-match assistant message.
- *   - TutorMessage renders them as clickable chips.
- *
- *   LAYOUT
- *   - New .app-body flex-row wrapper holds <main> + StudyTrailDesktop.
- *
- * Everything from Phase 4B (Stop, Retry, error states) preserved unchanged.
+ * Phase 6 (final polish):
+ *   - Deduplicated scenarios.js import.
+ *   - Added aria-label to <main> element.
+ *   - README updated; no functional changes.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // -- Phase 2 data layer -------------------------------------------------------
 import { activeConversation, emptyConversation } from './data/conversations.js';
-import { getScenarioById } from './data/scenarios.js';
-import { allScenarios } from './data/scenarios.js';
+import { allScenarios, getScenarioById } from './data/scenarios.js';
 
 // -- Phase 4A/4B --------------------------------------------------------------
 import { streamResponse } from '../data/mock-stream.mjs';
@@ -265,7 +234,7 @@ export default function App() {
       {/* Body: conversation column + desktop study trail */}
       <div className="app-body">
 
-        <main className="main">
+        <main className="main" aria-label="Course tutor conversation">
           {isEmpty ? (
             <EmptyState
               course={conversation.course}

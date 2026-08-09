@@ -3,34 +3,34 @@
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
 
 :root {
-  --bg:              #0d1117;
-  --surface:         #161b22;
-  --surface-hover:   #1c2330;
-  --border:          #21262d;
-  --border-subtle:   #1a2030;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-hover: #1c2330;
+  --border: #21262d;
+  --border-subtle: #1a2030;
 
-  --text-primary:    #e6edf3;
-  --text-secondary:  #7d8590;
-  --text-tertiary:   #484f58;
+  --text-primary: #e6edf3;
+  --text-secondary: #7d8590;
+  --text-tertiary: #484f58;
 
-  --accent:          #58a6ff;
-  --accent-dim:      rgba(88, 166, 255, 0.10);
-  --accent-border:   rgba(88, 166, 255, 0.22);
+  --accent: #58a6ff;
+  --accent-dim: rgba(88, 166, 255, 0.10);
+  --accent-border: rgba(88, 166, 255, 0.22);
 
-  --user-bg:         #161b22;
-  --user-border:     #21262d;
+  --user-bg: #161b22;
+  --user-border: #21262d;
 
-  --code-bg:         #0d1117;
-  --code-border:     #21262d;
-  --code-text:       #e6edf3;
+  --code-bg: #0d1117;
+  --code-border: #21262d;
+  --code-text: #e6edf3;
 
-  --radius-sm:  6px;
-  --radius-md:  10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-               "Helvetica Neue", Arial, sans-serif;
+    "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace,
-               "SFMono-Regular", Menlo, monospace;
+    "SFMono-Regular", Menlo, monospace;
 
   --content-max: 700px;
 }
@@ -192,7 +192,7 @@ body {
   white-space: nowrap;
 }
 
-.demo-btn:hover {
+.demo-btn:hover:not(:disabled) {
   background: var(--surface-hover);
   color: var(--text-primary);
 }
@@ -200,6 +200,16 @@ body {
 .demo-btn.active {
   background: var(--accent-dim);
   color: var(--accent);
+}
+
+.demo-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.demo-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ─── Main ───────────────────────────────────────────────────────────────────── */
@@ -217,7 +227,8 @@ body {
 .conversation-scroll {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden; /* fix: contain any wide child */
+  overflow-x: hidden;
+  /* fix: contain any wide child */
   padding: 2rem 1.25rem 1.5rem;
   scroll-behavior: smooth;
 }
@@ -250,7 +261,7 @@ body {
   padding: 1.125rem 0;
 }
 
-.turn + .turn {
+.turn+.turn {
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -579,6 +590,11 @@ body {
   color: var(--text-primary);
 }
 
+.example-prompt-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ─── Composer ───────────────────────────────────────────────────────────────── */
 
 .composer-area {
@@ -665,6 +681,11 @@ body {
 
 .composer-send:not(:disabled):active {
   transform: scale(0.93);
+}
+
+.composer-send:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .composer-hint {
@@ -778,14 +799,23 @@ body {
   animation: thinking-pulse 1.2s ease-in-out infinite;
 }
 
-.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
-.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes thinking-pulse {
-  0%, 60%, 100% {
+
+  0%,
+  60%,
+  100% {
     opacity: 0.25;
     transform: scale(0.85);
   }
+
   30% {
     opacity: 1;
     transform: scale(1);
@@ -812,8 +842,15 @@ body {
 }
 
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 /* ── Stream error note ───────────────────────────────────────────────────── */
@@ -860,7 +897,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #d29922;          /* warm amber — distinct from accent blue */
+  background: #d29922;
+  /* warm amber — distinct from accent blue */
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -877,13 +915,19 @@ body {
   transform: scale(0.93);
 }
 
+.composer-stop:focus-visible {
+  outline: 2px solid #d29922;
+  outline-offset: 2px;
+}
+
 /* ── Stream error row — partial content + Retry ───────────────────────────── */
 
 .stream-error-row {
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
-  flex-wrap: wrap;        /* wraps on very narrow viewports */
+  flex-wrap: wrap;
+  /* wraps on very narrow viewports */
 }
 
 /* ── Retry button ─────────────────────────────────────────────────────────── */
@@ -911,6 +955,11 @@ body {
 
 .retry-btn:active {
   opacity: 0.7;
+}
+
+.retry-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ── Stopped label — very subtle, appears after user presses Stop ─────────── */
@@ -979,6 +1028,7 @@ body {
 .study-trail::-webkit-scrollbar {
   width: 4px;
 }
+
 .study-trail::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 2px;
@@ -1035,14 +1085,16 @@ body {
 .trail-connector {
   position: absolute;
   left: 5px;
-  top: 1.375rem;         /* below the dot */
+  top: 1.375rem;
+  /* below the dot */
   bottom: 0;
   width: 1px;
   background: var(--border);
 }
 
 .trail-card {
-  padding-left: 1.25rem; /* leaves room for the dot + connector */
+  padding-left: 1.25rem;
+  /* leaves room for the dot + connector */
   position: relative;
 }
 
@@ -1180,7 +1232,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
   padding: 0.875rem 1rem;
   display: flex;
   flex-direction: column;
@@ -1328,3 +1380,60 @@ body {
   }
 }
 
+/* Final mobile overflow fix */
+@media (max-width: 600px) {
+
+  .app,
+  .app-body,
+  .main,
+  .conversation-scroll,
+  .tutor-content,
+  .message-row,
+  .message-content {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .message-row {
+    width: 100%;
+  }
+
+  .user-bubble {
+    max-width: 88%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .tutor-content {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .tutor-content pre,
+  .tutor-content table,
+  .katex-display {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .study-trail-mobile {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    box-sizing: border-box;
+  }
+
+  .composer-area {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .composer-textarea {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
