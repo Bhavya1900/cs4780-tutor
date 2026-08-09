@@ -3,14 +3,27 @@
  *
  * The message input area at the bottom of the screen.
  *
- * - Auto-grows up to a max height
- * - Submit on Enter (Shift+Enter for newline)
- * - Disabled when value is empty
+ * Phase 4B additions:
+ *   - Accepts isStreaming and onStop props.
+ *   - While isStreaming is true: the Send button becomes a Stop button.
+ *     The textarea is NOT disabled during streaming so the user can read
+ *     what they typed, but Enter will not submit a second question.
+ *   - When Stop is pressed: onStop() is called, which aborts the active stream.
+ *   - The hint text changes to reflect the current mode.
+ *   - Full keyboard accessibility: Stop has aria-label, is focusable,
+ *     and shows a square stop icon.
+ *
+ * Phase 3 behaviour preserved:
+ *   - Auto-grows up to a max height.
+ *   - Submit on Enter (Shift+Enter for newline).
+ *   - Send disabled when value is empty.
  */
 
 import React, { useRef, useEffect } from 'react';
 
-// Send icon (simple arrow up SVG, no icon library needed)
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+/** Arrow-up send icon */
 function SendIcon() {
   return (
     <svg
@@ -31,10 +44,28 @@ function SendIcon() {
   );
 }
 
-export default function Composer({ value, onChange, onSubmit, disabled }) {
+/** Square stop icon */
+function StopIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+    </svg>
+  );
+}
+
+// ── Composer ──────────────────────────────────────────────────────────────────
+
+export default function Composer({ value, onChange, onSubmit, onStop, isStreaming }) {
   const textareaRef = useRef(null);
 
-  // Auto-resize the textarea as content grows
+  // Auto-resize the textarea as content grows.
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -45,7 +76,8 @@ export default function Composer({ value, onChange, onSubmit, disabled }) {
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (value.trim()) onSubmit();
+      // Do not submit while streaming — Stop button handles that intent.
+      if (!isStreaming && value.trim()) onSubmit();
     }
   }
 
@@ -58,21 +90,44 @@ export default function Composer({ value, onChange, onSubmit, disabled }) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about CS 4780…"
+          placeholder={isStreaming ? 'Streaming response…' : 'Ask a question about CS 4780…'}
           rows={1}
-          disabled={disabled}
+          // Keep textarea enabled while streaming so the user can still read
+          // the composed text. Submission is blocked via handleKeyDown guard.
+          disabled={false}
           aria-label="Message the tutor"
         />
-        <button
-          className="composer-send"
-          onClick={onSubmit}
-          disabled={!value.trim() || disabled}
-          aria-label="Send message"
-        >
-          <SendIcon />
-        </button>
+
+        {isStreaming ? (
+          /* ── Stop button ───────────────────────────────────────────────── */
+          <button
+            className="composer-stop"
+            onClick={onStop}
+            aria-label="Stop generation"
+            title="Stop generation"
+            type="button"
+          >
+            <StopIcon />
+          </button>
+        ) : (
+          /* ── Send button ───────────────────────────────────────────────── */
+          <button
+            className="composer-send"
+            onClick={onSubmit}
+            disabled={!value.trim()}
+            aria-label="Send message"
+            type="button"
+          >
+            <SendIcon />
+          </button>
+        )}
       </div>
-      <p className="composer-hint">Enter to send · Shift+Enter for new line</p>
+
+      <p className="composer-hint">
+        {isStreaming
+          ? 'Streaming\u2003·\u2003press Stop to cancel'
+          : 'Enter to send\u2003·\u2003Shift+Enter for new line'}
+      </p>
     </div>
   );
 }

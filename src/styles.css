@@ -468,7 +468,7 @@ body {
   border-radius: 99px;
   padding: 0.2rem 0.625rem;
   line-height: 1.4;
-  cursor: default;
+  cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
   /* Chips wrap but don't overflow */
   max-width: 100%;
@@ -826,4 +826,505 @@ body {
   margin-top: 0.375rem;
   line-height: 1.5;
   font-style: italic;
+  /* Remove bottom margin when inside flex row */
+  margin-bottom: 0;
 }
+
+/* ─── Phase 4B: stream control, cancellation, failure recovery ───────────────
+
+   New classes only — nothing above this line is changed.
+
+   1. .composer-stop      — Stop button (replaces Send while streaming)
+   2. .stream-error-row   — flex row: error text + Retry button
+   3. .retry-btn          — the Retry button itself
+   4. .stream-stopped     — subtle "Generation stopped." label after abort
+
+──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Stop button ─────────────────────────────────────────────────────────── */
+
+/*
+ * Replaces .composer-send while isStreaming is true.
+ * Same position / size as Send, but uses an amber tint to signal "active"
+ * rather than "submit" — a clear visual distinction without redesigning the
+ * composer layout.
+ */
+
+.composer-stop {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #d29922;          /* warm amber — distinct from accent blue */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #0d1117;
+  z-index: 2;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.composer-stop:hover {
+  opacity: 0.85;
+}
+
+.composer-stop:active {
+  transform: scale(0.93);
+}
+
+/* ── Stream error row — partial content + Retry ───────────────────────────── */
+
+.stream-error-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;        /* wraps on very narrow viewports */
+}
+
+/* ── Retry button ─────────────────────────────────────────────────────────── */
+
+.retry-btn {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: 99px;
+  padding: 0.2rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1.6;
+}
+
+.retry-btn:hover {
+  opacity: 0.85;
+  background: rgba(88, 166, 255, 0.18);
+}
+
+.retry-btn:active {
+  opacity: 0.7;
+}
+
+/* ── Stopped label — very subtle, appears after user presses Stop ─────────── */
+
+.stream-stopped {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.125rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ── Mobile adjustments for 4B elements ──────────────────────────────────── */
+
+@media (max-width: 600px) {
+  /* Stop button: same as Send — already 32×32 and positioned, fits fine */
+
+  /* Error row: allow wrap on very small screens */
+  .stream-error-row {
+    gap: 0.5rem;
+  }
+
+  .retry-btn {
+    /* Ensure it stays tappable */
+    padding: 0.25rem 0.875rem;
+    min-height: 28px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Phase 5 — new and modified styles only.
+   Nothing above this line is changed.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── App body: flex-row wrapper for conversation + desktop trail ─────────── */
+
+.app-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  /* Prevent the body from creating its own scroll context */
+  overflow: hidden;
+}
+
+/* ─── Study Trail — Desktop ──────────────────────────────────────────────── */
+
+/*
+ * Sits to the right of .main. Width is narrow enough to be a secondary aid
+ * rather than competing with the conversation column.
+ */
+
+.study-trail {
+  width: 220px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.study-trail::-webkit-scrollbar {
+  width: 4px;
+}
+.study-trail::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.trail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trail-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.trail-count {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: 99px;
+  padding: 0.1rem 0.45rem;
+  line-height: 1.5;
+}
+
+.trail-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* Reset any browser ol margin/padding */
+  padding: 0;
+  margin: 0;
+}
+
+.trail-item {
+  position: relative;
+  padding-bottom: 0.875rem;
+}
+
+.trail-item:last-child {
+  padding-bottom: 0;
+}
+
+/*
+ * Vertical connector line between items. Positioned relative to the li
+ * and placed to the left of the card.
+ */
+.trail-connector {
+  position: absolute;
+  left: 5px;
+  top: 1.375rem;         /* below the dot */
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+.trail-card {
+  padding-left: 1.25rem; /* leaves room for the dot + connector */
+  position: relative;
+}
+
+/* Dot before each concept */
+.trail-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 1.5px solid var(--border-subtle);
+}
+
+.trail-concept {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin-bottom: 0.125rem;
+}
+
+.trail-source {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Study Trail — Mobile ───────────────────────────────────────────────── */
+
+/*
+ * A collapsible strip that sits between the conversation scroll area and
+ * the composer. Visible only on mobile; hidden on desktop.
+ */
+
+.study-trail-mobile {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  /* Hidden on desktop; shown on mobile via the @media block below */
+  display: none;
+}
+
+.trail-mobile-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.trail-mobile-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.trail-chevron {
+  margin-left: auto;
+  font-size: 0.5625rem;
+  color: var(--text-tertiary);
+}
+
+.trail-mobile-body {
+  padding: 0.75rem 1rem 1rem;
+  /* Horizontal scroll if the trail is very long */
+  overflow-x: auto;
+}
+
+/* On mobile, render the trail as a horizontal scroller */
+.trail-mobile-body .trail-list {
+  flex-direction: row;
+  gap: 0.75rem;
+  padding-bottom: 0.25rem;
+}
+
+.trail-mobile-body .trail-item {
+  flex-shrink: 0;
+  padding-bottom: 0;
+  max-width: 160px;
+}
+
+.trail-mobile-body .trail-connector {
+  display: none;
+}
+
+.trail-mobile-body .trail-card {
+  padding-left: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.625rem;
+}
+
+.trail-mobile-body .trail-card::before {
+  display: none;
+}
+
+/* ─── Citation chip: upgrade to interactive button ───────────────────────── */
+
+/*
+ * The base .citation-chip styles remain in their original location;
+ * only cursor was changed above (default -> pointer).
+ * The --open modifier adds a pressed/active look.
+ */
+
+.citation-chip--open {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.citation-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reset button appearance so the chip looks like its existing <span> design */
+.citation-chip {
+  font-family: var(--font-sans);
+  /* Inherited from the original rule; the button reset below is additive */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ─── Citation popover ───────────────────────────────────────────────────── */
+
+.citation-popover {
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  /* max-height prevents an unusually tall popover from escaping viewport */
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.citation-popover-header {
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.5rem;
+}
+
+.citation-popover-week {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
+  margin-bottom: 0.2rem;
+}
+
+.citation-popover-lecture {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.citation-popover-slide {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.citation-popover-slide-num {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.citation-popover-slide-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.citation-popover-bullets {
+  list-style: disc;
+  padding-left: 1rem;
+  margin: 0;
+}
+
+.citation-popover-bullets li {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.2rem;
+}
+
+.citation-popover-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+.citation-popover-formula {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  color: #e3b341;
+  word-break: break-all;
+  display: block;
+}
+
+/* ─── Suggestion chips (no-match message) ────────────────────────────────── */
+
+.suggestion-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+.suggestion-chip {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  line-height: 1.45;
+}
+
+.suggestion-chip:hover {
+  border-color: var(--accent-border);
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.suggestion-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Phase 5 responsive adjustments ────────────────────────────────────── */
+
+/* Desktop: show trail panel, hide mobile strip */
+@media (min-width: 769px) {
+  .study-trail-mobile {
+    display: none;
+  }
+}
+
+/* Mobile: hide desktop trail panel, show mobile strip */
+@media (max-width: 768px) {
+  .study-trail {
+    display: none;
+  }
+
+  .study-trail-mobile {
+    display: block;
+  }
+
+  /* Citation popover: cap width on small screens */
+  .citation-popover {
+    width: min(288px, calc(100vw - 24px)) !important;
+  }
+
+  /* Suggestion chips: full width on mobile */
+  .suggestion-chip {
+    font-size: 0.875rem;
+    padding: 0.625rem 0.875rem;
+  }
+}
+
