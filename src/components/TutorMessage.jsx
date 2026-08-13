@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TutorMessage.jsx
  *
  * Renders a single assistant (tutor) message.
@@ -32,6 +32,8 @@ import 'katex/dist/katex.min.css';
 
 import { resolveCitation } from '../utils/citations.js';
 import TutorThinking from './TutorThinking.jsx';
+import { makeSlideKey } from '../utils/studyStorage.js';
+import { BookmarkIcon } from './LearningCompanion.jsx';
 
 // --- Citation popover --------------------------------------------------------
 
@@ -62,7 +64,7 @@ function getPopoverStyle(anchorRect) {
   return { position: 'fixed', top, left, width: POPOVER_W };
 }
 
-function CitationPopover({ result, style, popRef }) {
+function CitationPopover({ result, style, popRef, isSaved, onToggleSave }) {
   const { lecture, slide } = result;
 
   return createPortal(
@@ -76,7 +78,18 @@ function CitationPopover({ result, style, popRef }) {
       {/* Header */}
       <div className="citation-popover-header">
         <p className="citation-popover-week">Week {lecture.week}</p>
-        <p className="citation-popover-lecture">{lecture.title}</p>
+        <div className="citation-popover-lecture-row">
+          <p className="citation-popover-lecture">{lecture.title}</p>
+          <button
+            type="button"
+            className={`citation-save-btn${isSaved ? ' is-saved' : ''}`}
+            onClick={() => onToggleSave?.(lecture, slide)}
+            aria-label={isSaved ? 'Remove from saved concepts' : 'Save for revision'}
+            title={isSaved ? 'Remove from saved concepts' : 'Save for revision'}
+          >
+            <BookmarkIcon filled={isSaved} />
+          </button>
+        </div>
       </div>
 
       {/* Slide identity */}
@@ -105,13 +118,17 @@ function CitationPopover({ result, style, popRef }) {
 
 // --- Citation chip -----------------------------------------------------------
 
-function CitationChip({ citation }) {
+function CitationChip({ citation, savedKeys = [], onSaveToggle }) {
   const [isOpen, setIsOpen] = useState(false);
   const [popoverStyle, setPopoverStyle] = useState({});
   const btnRef = useRef(null);
   const popRef = useRef(null);
 
   const result = resolveCitation(citation);
+  const savedKey = result.resolved
+    ? makeSlideKey(result.lecture.lecture_id, result.slide.slide_number)
+    : null;
+  const isSaved = savedKey ? savedKeys.includes(savedKey) : false;
 
   function openPopover() {
     const rect = btnRef.current?.getBoundingClientRect();
@@ -176,6 +193,8 @@ function CitationChip({ citation }) {
           result={result}
           style={popoverStyle}
           popRef={popRef}
+          isSaved={isSaved}
+          onToggleSave={onSaveToggle}
         />
       )}
     </>
@@ -184,7 +203,7 @@ function CitationChip({ citation }) {
 
 // --- TutorMessage ------------------------------------------------------------
 
-export default function TutorMessage({ message, onRetry, onSuggestion }) {
+export default function TutorMessage({ message, onRetry, onSuggestion, savedKeys = [], onSaveToggle }) {
   const {
     content,
     citations,
@@ -280,7 +299,7 @@ export default function TutorMessage({ message, onRetry, onSuggestion }) {
       {hasCitations && (
         <div className="citations">
           {citations.map((cit, i) => (
-            <CitationChip key={i} citation={cit} />
+            <CitationChip key={i} citation={cit} savedKeys={savedKeys} onSaveToggle={onSaveToggle} />
           ))}
         </div>
       )}

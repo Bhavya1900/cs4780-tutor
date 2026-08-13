@@ -15,6 +15,7 @@ import { activeConversation, emptyConversation } from './data/conversations.js';
 import { allScenarios, getScenarioById } from './data/scenarios.js';
 import { streamResponse } from '../data/mock-stream.mjs';
 import { matchScenario } from './utils/scenarioMatcher.js';
+import { resolveCitation } from './utils/citations.js';
 import { useStreaming } from './hooks/useStreaming.js';
 import {
   saveConversation,
@@ -33,6 +34,8 @@ import EmptyState from './components/EmptyState.jsx';
 import Composer from './components/Composer.jsx';
 import ChatSidebar from './components/ChatSidebar.jsx';
 import CourseProgress from './components/CourseProgress.jsx';
+import LearningCompanion from './components/LearningCompanion.jsx';
+import { loadSavedConcepts, saveSavedConcepts, makeSlideKey } from './utils/studyStorage.js';
 
 const FIXTURES = {
   returning: activeConversation,
@@ -116,6 +119,7 @@ export default function App() {
   const [chats, setChats] = useState(workspace.chats);
   const [activeChatId, setActiveChatId] = useState(workspace.activeId);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [savedKeys, setSavedKeys] = useState(loadSavedConcepts);
 
   const activeChatRef = useRef(workspace.activeId);
   const activeChat = chats.find((chat) => chat.id === activeChatId) ?? chats[0];
@@ -243,6 +247,35 @@ export default function App() {
     },
     [chats, isStreaming, selectChat]
   );
+
+  // ---- Saved concepts + learning companion --------------------------------
+
+  const handleSaveToggle = useCallback((lecture, slide) => {
+    const key = makeSlideKey(lecture.lecture_id, slide.slide_number);
+    setSavedKeys((previous) => {
+      const next = previous.includes(key)
+        ? previous.filter((item) => item !== key)
+        : [...previous, key];
+      saveSavedConcepts(next);
+      return next;
+    });
+  }, []);
+
+  function handleLearningAsk({ lecture, slide }) {
+    const matchingScenario = allScenarios.find((scenario) =>
+      Array.isArray(scenario.citations) && scenario.citations.some((citation) => {
+        const result = resolveCitation(citation);
+        return result.resolved && result.slide.slide_number === slide.slide_number && result.lecture.lecture_id === lecture.lecture_id;
+      })
+    );
+
+    if (matchingScenario?.prompt) {
+      handleSend(matchingScenario.prompt);
+      return;
+    }
+
+    setDraft(`I'd like to review: ${slide.title}`);
+  }
 
   // ---- Current conversation metadata ----------------------------------------
 
@@ -379,6 +412,8 @@ export default function App() {
                             : null
                         }
                         onSuggestion={handleSend}
+                        savedKeys={savedKeys}
+                        onSaveToggle={handleSaveToggle}
                       />
                     )}
                   </div>
@@ -390,6 +425,14 @@ export default function App() {
 
           {!isEmpty && <StudyTrailMobile messages={messages} />}
           <CourseProgress chats={chats} activeChatId={activeChatId} compact />
+          <LearningCompanion
+            chats={chats}
+            activeChatId={activeChatId}
+            savedKeys={savedKeys}
+            onSaveToggle={handleSaveToggle}
+            onAsk={handleLearningAsk}
+            compact
+          />
 
           <Composer
             value={draft}
@@ -402,6 +445,13 @@ export default function App() {
 
         <aside className="learning-rail" aria-label="Course learning progress">
           <CourseProgress chats={chats} activeChatId={activeChatId} />
+          <LearningCompanion
+            chats={chats}
+            activeChatId={activeChatId}
+            savedKeys={savedKeys}
+            onSaveToggle={handleSaveToggle}
+            onAsk={handleLearningAsk}
+          />
           {!isEmpty && <StudyTrailDesktop messages={messages} />}
         </aside>
       </div>

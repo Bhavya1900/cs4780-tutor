@@ -76,7 +76,33 @@ export default function ChatSidebar({
           <button className="new-chat-btn" onClick={onNewChat} type="button">
             <PlusIcon />
             <span>New chat</span>
+            <kbd>⌘ K</kbd>
           </button>
+
+          <div className="demo-state-panel">
+            <div className="demo-state-heading">
+              <span>Preview student state</span>
+              <span className="demo-state-badge">Demo</span>
+            </div>
+            <div className="demo-sidebar-switcher" role="group" aria-label="Demo persona">
+              <button
+                type="button"
+                className={activePersona === 'returning' ? 'active' : ''}
+                onClick={() => onDemo('returning')}
+                aria-pressed={activePersona === 'returning'}
+              >
+                Returning
+              </button>
+              <button
+                type="button"
+                className={activePersona === 'new' ? 'active' : ''}
+                onClick={() => onDemo('new')}
+                aria-pressed={activePersona === 'new'}
+              >
+                New student
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="chat-sidebar-content">
@@ -124,27 +150,6 @@ export default function ChatSidebar({
           </div>
         </div>
 
-        <div className="chat-sidebar-footer">
-          <p className="sidebar-footer-label">Demo states</p>
-          <div className="demo-sidebar-switcher" role="group" aria-label="Demo persona">
-            <button
-              type="button"
-              className={activePersona === 'returning' ? 'active' : ''}
-              onClick={() => onDemo('returning')}
-              aria-pressed={activePersona === 'returning'}
-            >
-              Returning
-            </button>
-            <button
-              type="button"
-              className={activePersona === 'new' ? 'active' : ''}
-              onClick={() => onDemo('new')}
-              aria-pressed={activePersona === 'new'}
-            >
-              New
-            </button>
-          </div>
-        </div>
       </aside>
     </>
   );
