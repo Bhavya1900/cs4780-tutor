@@ -1,5 +1,7 @@
 CS 4780 Course Tutor
 
+Deployed link: https://cs4780-tutor.vercel.app/
+
 A polished, frontend-first course tutor for CS 4780 --- Machine
 Learning for Engineers, built as a Frontend Engineer Intern take-home
 project.
