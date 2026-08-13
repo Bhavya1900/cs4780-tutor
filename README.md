@@ -1,4 +1,4 @@
-CS 4780 Course Tutor
+## CS 4780 Course Tutor
 
 Deployed link: https://cs4780-tutor.vercel.app/
 
