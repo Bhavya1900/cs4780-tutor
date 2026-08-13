@@ -1,72 +1,131 @@
 /**
  * App.jsx
  *
- * Root of the CS 4780 Course Tutor -- Phase 5 / Phase 6.
+ * Root of the CS 4780 Course Tutor.
  *
- * Phase 6 (final polish):
- *   - Deduplicated scenarios.js import.
- *   - Added aria-label to <main> element.
- *   - README updated; no functional changes.
+ * Competition-layer addition:
+ *   - Real multi-chat workspace with New Chat + persistent history.
+ *   - Existing streaming, Stop, Retry, citations, Study Trail and demo states
+ *     remain intact.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-// -- Phase 2 data layer -------------------------------------------------------
 import { activeConversation, emptyConversation } from './data/conversations.js';
 import { allScenarios, getScenarioById } from './data/scenarios.js';
-
-// -- Phase 4A/4B --------------------------------------------------------------
 import { streamResponse } from '../data/mock-stream.mjs';
 import { matchScenario } from './utils/scenarioMatcher.js';
 import { useStreaming } from './hooks/useStreaming.js';
+import {
+  saveConversation,
+  loadConversation,
+} from './utils/conversationStorage.js';
+import {
+  loadChats,
+  saveChats,
+  loadActiveChatId,
+  saveActiveChatId,
+} from './utils/chatStorage.js';
 
-// -- Phase 5 ------------------------------------------------------------------
-import { saveConversation, loadConversation } from './utils/conversationStorage.js';
 import { StudyTrailDesktop, StudyTrailMobile } from './components/StudyTrail.jsx';
-
-// -- Components ---------------------------------------------------------------
 import TutorMessage from './components/TutorMessage.jsx';
 import EmptyState from './components/EmptyState.jsx';
 import Composer from './components/Composer.jsx';
+import ChatSidebar from './components/ChatSidebar.jsx';
 
-// -- Fixtures keyed by persona ------------------------------------------------
 const FIXTURES = {
   returning: activeConversation,
   new: emptyConversation,
 };
 
-// -- Suggestion prompts from real scenario data (never hardcoded) -------------
-//
-// Pick four educational scenarios whose prompts make good "try asking" chips.
-// These are the IDs that produce rich, well-illustrated responses.
 const EDUCATIONAL_IDS = ['plain', 'code', 'math', 'table'];
 const SUGGESTION_PROMPTS = allScenarios
   .filter((s) => EDUCATIONAL_IDS.includes(s.id))
   .map((s) => s.prompt);
 
-// -- No-match message copy ----------------------------------------------------
 const NO_MATCH_MESSAGE =
-  "This demo is scoped to the supplied CS\u00a04780 scenarios. I can\u2019t answer questions outside that set \u2014 but here are some questions I *can* help with:";
+  'This demo is scoped to the supplied CS 4780 scenarios. I can’t answer questions outside that set — but here are some questions I *can* help with:';
 
-// -- App ----------------------------------------------------------------------
+const DEMO_CHAT_IDS = {
+  returning: 'demo-returning',
+  new: 'demo-new',
+};
+
+function createDemoChats() {
+  return [
+    {
+      id: DEMO_CHAT_IDS.returning,
+      title: 'Returning student',
+      persona: 'returning',
+      isDemo: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: loadConversation('returning', activeConversation.messages),
+    },
+    {
+      id: DEMO_CHAT_IDS.new,
+      title: 'New student',
+      persona: 'new',
+      isDemo: true,
+      createdAt: Date.now() + 1,
+      updatedAt: Date.now() + 1,
+      messages: loadConversation('new', emptyConversation.messages),
+    },
+  ];
+}
+
+function getInitialWorkspace() {
+  const storedChats = loadChats();
+  const chats = storedChats?.length ? storedChats : createDemoChats();
+  const storedActiveId = loadActiveChatId();
+  const activeId =
+    chats.some((chat) => chat.id === storedActiveId)
+      ? storedActiveId
+      : chats[0].id;
+
+  return { chats, activeId };
+}
+
+function makeChatTitle(messages) {
+  const firstUserMessage = messages.find((message) => message.role === 'user');
+  if (!firstUserMessage?.content) return 'New chat';
+
+  const clean = firstUserMessage.content.replace(/\s+/g, ' ').trim();
+  if (clean.length <= 42) return clean;
+  return `${clean.slice(0, 39).trimEnd()}…`;
+}
+
+function createChat() {
+  const now = Date.now();
+  return {
+    id: `chat_${now}_${Math.random().toString(36).slice(2, 7)}`,
+    title: 'New chat',
+    persona: 'new',
+    isDemo: false,
+    createdAt: now,
+    updatedAt: now,
+    messages: [],
+  };
+}
 
 export default function App() {
-  // ---- Persona state --------------------------------------------------------
+  // ---- Persistent multi-chat workspace --------------------------------------
 
-  const [activePersona, setActivePersona] = useState('returning');
+  const [workspace] = useState(getInitialWorkspace);
+  const [chats, setChats] = useState(workspace.chats);
+  const [activeChatId, setActiveChatId] = useState(workspace.activeId);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Non-reactive ref so the save effect always reads the current persona
-  // without it being listed as a dependency (avoids the save triggering on
-  // every persona switch before the new messages arrive).
-  const activePersonaRef = useRef('returning');
+  const activeChatRef = useRef(workspace.activeId);
+  const activeChat = chats.find((chat) => chat.id === activeChatId) ?? chats[0];
+
+  // The existing persona concept remains for the supplied Returning/New demo
+  // states. Normal chats use the "new" persona without affecting the fixtures.
+  const activePersona = activeChat?.persona ?? 'new';
 
   // ---- Streaming hook -------------------------------------------------------
 
-  // Load the returning student's conversation once at mount time.
-  // useState lazy initialiser runs only once.
-  const [initialMessages] = useState(() =>
-    loadConversation('returning', activeConversation.messages)
-  );
+  const [initialMessages] = useState(() => activeChat?.messages ?? []);
 
   const {
     messages,
@@ -77,19 +136,40 @@ export default function App() {
     resetMessages,
   } = useStreaming(initialMessages);
 
-  // ---- Composer draft -------------------------------------------------------
+  // ---- Composer -------------------------------------------------------------
 
   const [draft, setDraft] = useState('');
   const scrollAnchorRef = useRef(null);
 
-  // ---- Persistence: save after every settled update -------------------------
+  // ---- Persist chat workspace ------------------------------------------------
 
   useEffect(() => {
-    // Skip while a stream is in flight -- transient messages are not worth saving.
     if (isStreaming) return;
-    // Nothing to save for a brand-new empty persona.
-    if (messages.length === 0) return;
-    saveConversation(activePersonaRef.current, messages);
+
+    setChats((previous) => {
+      const current = previous.find((chat) => chat.id === activeChatRef.current);
+      if (!current) return previous;
+
+      const nextTitle = current.isDemo
+        ? current.title
+        : makeChatTitle(messages);
+
+      const next = previous.map((chat) =>
+        chat.id === activeChatRef.current
+          ? {
+              ...chat,
+              title: nextTitle,
+              updatedAt: Date.now(),
+              messages,
+            }
+          : chat
+      );
+
+      saveChats(next);
+      return next;
+    });
+
+    saveActiveChatId(activeChatRef.current);
   }, [messages, isStreaming]);
 
   // ---- Scroll to bottom on new message --------------------------------------
@@ -98,42 +178,79 @@ export default function App() {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ---- Persona switcher -----------------------------------------------------
+  // ---- Chat selection -------------------------------------------------------
+
+  const selectChat = useCallback(
+    (chatId) => {
+      if (chatId === activeChatRef.current || isStreaming) return;
+
+      const nextChat = chats.find((chat) => chat.id === chatId);
+      if (!nextChat) return;
+
+      // Persist the current chat before moving away from it.
+      saveChats(
+        chats.map((chat) =>
+          chat.id === activeChatRef.current
+            ? { ...chat, messages, updatedAt: Date.now() }
+            : chat
+        )
+      );
+
+      activeChatRef.current = chatId;
+      setActiveChatId(chatId);
+      resetMessages(nextChat.messages);
+      setDraft('');
+      setSidebarOpen(false);
+      saveActiveChatId(chatId);
+    },
+    [chats, isStreaming, messages, resetMessages]
+  );
+
+  // ---- New Chat -------------------------------------------------------------
+
+  const handleNewChat = useCallback(() => {
+    if (isStreaming) return;
+
+    const nextChat = createChat();
+    const currentChats = chats.map((chat) =>
+      chat.id === activeChatRef.current
+        ? { ...chat, messages, updatedAt: Date.now() }
+        : chat
+    );
+    const nextChats = [nextChat, ...currentChats];
+
+    setChats(nextChats);
+    saveChats(nextChats);
+
+    activeChatRef.current = nextChat.id;
+    setActiveChatId(nextChat.id);
+    resetMessages([]);
+    setDraft('');
+    setSidebarOpen(false);
+    saveActiveChatId(nextChat.id);
+  }, [chats, isStreaming, messages, resetMessages]);
+
+  // ---- Demo state switcher --------------------------------------------------
 
   const switchPersona = useCallback(
     (persona) => {
-      if (persona === activePersonaRef.current || isStreaming) return;
-
-      // Persist outgoing persona before switching.
-      saveConversation(activePersonaRef.current, messages);
-
-      // Load incoming persona.
-      const fixture = FIXTURES[persona].messages;
-      const next = loadConversation(persona, fixture);
-
-      activePersonaRef.current = persona;
-      setActivePersona(persona);
-      resetMessages(next);
-      setDraft('');
+      if (isStreaming) return;
+      const demoId = DEMO_CHAT_IDS[persona];
+      const demoChat = chats.find((chat) => chat.id === demoId);
+      if (!demoChat) return;
+      selectChat(demoId);
     },
-    [isStreaming, messages, resetMessages]
+    [chats, isStreaming, selectChat]
   );
 
-  // ---- Current conversation metadata (for header + EmptyState) --------------
+  // ---- Current conversation metadata ----------------------------------------
 
-  const conversation = FIXTURES[activePersona];
+  const conversation =
+    FIXTURES[activePersona] ?? FIXTURES.new;
   const isEmpty = messages.length === 0;
 
   // ---- handleSend -----------------------------------------------------------
 
-  /**
-   * Submit a question.
-   *
-   * Accepts an optional textOverride so example prompts and suggestion chips
-   * can send through the real streaming path without going through the draft.
-   *
-   * @param {string} [textOverride]
-   */
   async function handleSend(textOverride) {
     const text = (
       typeof textOverride === 'string' ? textOverride : draft
@@ -141,20 +258,23 @@ export default function App() {
 
     if (!text || isStreaming) return;
 
-    // Clear the draft only when we used it (not when an override was supplied).
     if (typeof textOverride !== 'string') setDraft('');
 
     const scenarioId = matchScenario(text);
 
     if (!scenarioId) {
-      // Unmatched -- show the explanation + suggestion chips, no stream.
-      submitMessage(text, null, null, NO_MATCH_MESSAGE, null, SUGGESTION_PROMPTS);
+      submitMessage(
+        text,
+        null,
+        null,
+        NO_MATCH_MESSAGE,
+        null,
+        SUGGESTION_PROMPTS
+      );
       return;
     }
 
     const scenario = getScenarioById(scenarioId);
-
-    // One AbortController, wired to both the generator AND the hook ref.
     const controller = new AbortController();
     const gen = streamResponse(scenarioId, { signal: controller.signal });
 
@@ -167,7 +287,7 @@ export default function App() {
     );
   }
 
-  // ---- handleStop / handleRetry ---------------------------------------------
+  // ---- Stop / Retry ---------------------------------------------------------
 
   function handleStop() {
     stopStream();
@@ -191,14 +311,21 @@ export default function App() {
     );
   }
 
-  // ---- Render ---------------------------------------------------------------
-
   return (
     <div className="app">
-
-      {/* Header */}
       <header className="header">
         <div className="header-left">
+          <button
+            className="mobile-chat-toggle"
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open chat history"
+          >
+            <span className="mobile-chat-toggle-line" />
+            <span className="mobile-chat-toggle-line" />
+            <span className="mobile-chat-toggle-line" />
+          </button>
+
           <span className="header-course-badge">
             {conversation.course.code}
           </span>
@@ -209,30 +336,21 @@ export default function App() {
         </div>
 
         <div className="header-right">
-          <div className="demo-switcher" role="group" aria-label="Demo persona">
-            <span className="demo-switcher-label">Demo</span>
-            <button
-              className={`demo-btn${activePersona === 'returning' ? ' active' : ''}`}
-              onClick={() => switchPersona('returning')}
-              aria-pressed={activePersona === 'returning'}
-              disabled={isStreaming}
-            >
-              Returning
-            </button>
-            <button
-              className={`demo-btn${activePersona === 'new' ? ' active' : ''}`}
-              onClick={() => switchPersona('new')}
-              aria-pressed={activePersona === 'new'}
-              disabled={isStreaming}
-            >
-              New
-            </button>
-          </div>
+          <span className="active-chat-title">{activeChat?.title}</span>
         </div>
       </header>
 
-      {/* Body: conversation column + desktop study trail */}
       <div className="app-body">
+        <ChatSidebar
+          chats={chats}
+          activeChatId={activeChatId}
+          activePersona={activePersona}
+          onSelect={selectChat}
+          onNewChat={handleNewChat}
+          onClose={() => setSidebarOpen(false)}
+          onDemo={switchPersona}
+          mobileOpen={sidebarOpen}
+        />
 
         <main className="main" aria-label="Course tutor conversation">
           {isEmpty ? (
@@ -254,7 +372,11 @@ export default function App() {
                     ) : (
                       <TutorMessage
                         message={message}
-                        onRetry={message.error ? () => handleRetry(message) : null}
+                        onRetry={
+                          message.error
+                            ? () => handleRetry(message)
+                            : null
+                        }
                         onSuggestion={handleSend}
                       />
                     )}
@@ -265,7 +387,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Mobile Study Trail: between scroll area and composer */}
           {!isEmpty && <StudyTrailMobile messages={messages} />}
 
           <Composer
@@ -277,9 +398,7 @@ export default function App() {
           />
         </main>
 
-        {/* Desktop Study Trail: beside the conversation */}
         {!isEmpty && <StudyTrailDesktop messages={messages} />}
-
       </div>
     </div>
   );
