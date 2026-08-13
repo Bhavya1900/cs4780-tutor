@@ -32,6 +32,7 @@ import TutorMessage from './components/TutorMessage.jsx';
 import EmptyState from './components/EmptyState.jsx';
 import Composer from './components/Composer.jsx';
 import ChatSidebar from './components/ChatSidebar.jsx';
+import CourseProgress from './components/CourseProgress.jsx';
 
 const FIXTURES = {
   returning: activeConversation,
@@ -388,6 +389,7 @@ export default function App() {
           )}
 
           {!isEmpty && <StudyTrailMobile messages={messages} />}
+          <CourseProgress chats={chats} activeChatId={activeChatId} compact />
 
           <Composer
             value={draft}
@@ -398,7 +400,10 @@ export default function App() {
           />
         </main>
 
-        {!isEmpty && <StudyTrailDesktop messages={messages} />}
+        <aside className="learning-rail" aria-label="Course learning progress">
+          <CourseProgress chats={chats} activeChatId={activeChatId} />
+          {!isEmpty && <StudyTrailDesktop messages={messages} />}
+        </aside>
       </div>
     </div>
   );

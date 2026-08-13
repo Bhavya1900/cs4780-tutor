@@ -1,4 +1,5 @@
 import React from 'react';
+import CourseProgress from './CourseProgress.jsx';
 
 function ChatIcon() {
   return (
@@ -115,13 +116,11 @@ export default function ChatSidebar({
 
           <div className="sidebar-section sidebar-learn-section">
             <div className="sidebar-section-heading"><span>Learn</span></div>
-            <div className="sidebar-learn-card">
-              <span className="sidebar-learn-dot" />
-              <div>
-                <p>Study as you go</p>
-                <span>Progress and learning path coming next</span>
-              </div>
-            </div>
+            <CourseProgress
+              chats={chats}
+              activeChatId={activeChatId}
+              compact
+            />
           </div>
         </div>
 
